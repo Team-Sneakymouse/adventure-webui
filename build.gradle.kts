@@ -13,7 +13,7 @@ plugins {
     alias(libs.plugins.jib)
 }
 
-val javaTarget = 21
+val javaTarget = 25
 val entryPoint = "io.ktor.server.netty.EngineMain"
 
 java {
@@ -28,12 +28,6 @@ java {
 
 repositories {
     mavenCentral()
-    maven(url = "https://oss.sonatype.org/content/repositories/snapshots/") {
-        name = "sonatype-oss-snapshots"
-        mavenContent {
-            snapshotsOnly()
-        }
-    }
 }
 
 spotless {
@@ -143,6 +137,7 @@ jib {
             Built with Adventure ${libs.versions.adventure.get()}, from webui commit $commit"""
             },
         )
+        jvmFlags = listOf("--enable-native-access=ALL-UNNAMED")
     }
     to {
         image = "ghcr.io/papermc/adventure-webui/webui"
