@@ -23,12 +23,10 @@ import kotlinx.coroutines.launch
 import net.kyori.adventure.text.minimessage.MiniMessage
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
-import okhttp3.internal.and
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import kotlin.coroutines.CoroutineContext
-import kotlin.text.get
 import kotlin.time.Duration.Companion.hours
 
 /** Manager class for previewing server status. */
@@ -198,9 +196,9 @@ public class ServerStatusPreviewManager(
 
         while (true) {
             currentByte = readByte()
-            value = value or ((currentByte and 0x7F) shl position)
+            value = value or ((currentByte.toInt() and 0x7F) shl position)
 
-            if ((currentByte and 0x80) == 0) break
+            if ((currentByte.toInt() and 0x80) == 0) break
 
             position += 7
 
