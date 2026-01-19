@@ -7,11 +7,10 @@ import java.time.Instant
 
 plugins {
     alias(libs.plugins.indra.git)
-    alias(libs.plugins.jib)
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlinx.serialization)
     alias(libs.plugins.spotless)
-    `java-base`
+    alias(libs.plugins.jib)
 }
 
 val javaTarget = 21
@@ -56,7 +55,6 @@ kotlin {
     explicitApi()
 
     jvm {
-        withJava()
         mainRun {
             mainClass = entryPoint
         }
@@ -134,13 +132,16 @@ jib {
                 }
             }
         }
+        configurationName = "jvmRuntimeClasspath"
     }
     container {
-        setMainClass(entryPoint)
+        mainClass = entryPoint
         labels.put(
             "org.opencontainers.image.description",
-            """A Web UI for working with Adventure components.
-            Built with Adventure ${libs.versions.adventure.get()}, from webui commit ${indraGit.commit()?.name ?: "<unknown>"}""",
+            indraGit.commit().map { it.name }.orElse("<unknown>").map { commit ->
+                """A Web UI for working with Adventure components.
+            Built with Adventure ${libs.versions.adventure.get()}, from webui commit $commit"""
+            },
         )
     }
     to {
@@ -148,8 +149,19 @@ jib {
         tags =
             setOf(
                 "latest",
-                "${indraGit.branchName()}-${indraGit.commit()?.name()?.take(7)}-${Instant.now().epochSecond}",
+                "${indraGit.branchName().getOrElse(
+                    "nogit",
+                ).replace("/", "_")}-${indraGit.commit().orNull?.name()?.take(7)}-${Instant.now().epochSecond}",
             )
+    }
+}
+
+sourceSets {
+    // jib is stupid and inflexible
+    register("main") {
+        val jvmMain = getByName("jvmMain")
+        (output.classesDirs as ConfigurableFileCollection).from(jvmMain.output.classesDirs)
+        jvmMain.output.resourcesDir?.let { output.setResourcesDir(it) }
     }
 }
 
@@ -171,20 +183,27 @@ tasks {
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
 
         from(webpackTask.flatMap { it.mainOutputFile })
-        filesMatching("application.conf") {
-            expand(
-                "jsScriptFile" to "${rootProject.name}.js",
-                "miniMessageVersion" to
-                    libs.adventure.minimessage
-                        .get()
-                        .versionConstraint.requiredVersion,
-                "commitHash" to
-                    rootProject.extensions
-                        .getByType<IndraGitExtension>()
-                        .commit()
-                        ?.name
-                        .orEmpty(),
-            )
+
+        val configProperties = objects.mapProperty(String::class, String::class)
+        configProperties.put("jsScriptFile", "${rootProject.name}.js")
+        configProperties.put(
+            "miniMessageVersion",
+            libs.adventure.minimessage.map { it.versionConstraint.requiredVersion },
+        )
+        configProperties.put(
+            "commitHash",
+            rootProject.extensions
+                .getByType<IndraGitExtension>()
+                .commit()
+                .map { it.name }
+                .orElse(""),
+        )
+        inputs.property("configProperties", configProperties)
+
+        doFirst {
+            filesMatching("application.conf") {
+                expand(configProperties.get())
+            }
         }
     }
 

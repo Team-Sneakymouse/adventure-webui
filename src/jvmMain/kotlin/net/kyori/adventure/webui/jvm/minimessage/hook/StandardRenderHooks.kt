@@ -39,7 +39,7 @@ public val CLICK_EVENT_RENDER_HOOK: ComponentRenderHook = { component ->
             when (val payload = clickEvent.payload()) {
                 is ClickEvent.Payload.Text -> payload.value()
                 is ClickEvent.Payload.Int -> payload.integer().toString()
-                is ClickEvent.Payload.Custom -> payload.nbt().string()
+                is ClickEvent.Payload.Custom -> payload.nbt()?.string() ?: "null"
                 is ClickEvent.Payload.Dialog -> "Payload.Dialog"
                 else -> error("Unknown click event payload type: $payload")
             }
