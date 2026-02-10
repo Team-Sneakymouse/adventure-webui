@@ -6,6 +6,7 @@ import io.ktor.server.http.content.defaultResource
 import io.ktor.server.http.content.resource
 import io.ktor.server.http.content.resources
 import io.ktor.server.http.content.static
+import io.ktor.server.http.content.staticFiles
 import io.ktor.server.http.content.staticResources
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respondText
@@ -55,6 +56,7 @@ import net.kyori.adventure.webui.websocket.Placeholders
 import net.kyori.adventure.webui.websocket.Response
 import java.time.Instant
 import net.kyori.adventure.webui.jvm.minimessage.hook.SHADOW_COLOR_RENDER_HOOK
+import java.io.File
 
 private val startedAt = Instant.now()
 
@@ -102,14 +104,7 @@ public fun Application.miniMessage() {
 
     routing {
         // define static path to resources
-        static("") {
-            resources("web")
-            defaultResource("web/index.html")
-
-            val script = this@miniMessage.getConfigString("jsScriptFile")
-            resource("js/main.js", script)
-            resource("js/$script.map", "$script.map")
-        }
+        staticResources("/", "web")
 
         // set up other routing
         route(URL_API) {

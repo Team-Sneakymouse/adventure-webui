@@ -177,10 +177,12 @@ tasks {
     named<AbstractCopyTask>("jvmProcessResources") {
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
 
-        from(webpackTask.flatMap { it.mainOutputFile })
+        from(webpackTask.flatMap { it.mainOutputFile }) {
+            into("web/js")
+            include("*.js", "*.js.map")
+        }
 
         val configProperties = objects.mapProperty(String::class, String::class)
-        configProperties.put("jsScriptFile", "${rootProject.name}.js")
         configProperties.put(
             "miniMessageVersion",
             libs.adventure.minimessage.map { it.versionConstraint.requiredVersion },
