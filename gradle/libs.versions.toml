@@ -1,6 +1,6 @@
 [versions]
-adventure = "4.26.1"
-kotlin = "2.3.10"
+adventure = "5.1.1"
+kotlin = "2.3.21"
 ktlint = "1.8.0"
 ktor = "3.4.0"
 
@@ -9,7 +9,7 @@ indra-git = { id = "net.kyori.indra.git", version = "4.0.0" }
 jib = { id = "com.google.cloud.tools.jib", version = "3.5.3" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin"}
-spotless = { id = "com.diffplug.spotless", version = "8.2.1" }
+spotless = { id = "com.diffplug.spotless", version = "8.5.1" }
 
 [libraries]
 adventure-minimessage = { group = "net.kyori", name = "adventure-text-minimessage", version.ref = "adventure" }
@@ -17,7 +17,7 @@ adventure-text-serializer-gson = { group = "net.kyori", name = "adventure-text-s
 adventure-text-serializer-legacy = { group = "net.kyori", name = "adventure-text-serializer-legacy", version.ref = "adventure" }
 cache4k = { group = "io.github.reactivecircus.cache4k", name = "cache4k", version = "0.14.0" }
 kotlinx-html = { group = "org.jetbrains.kotlinx", name = "kotlinx-html", version = "0.12.0" }
-kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version = "1.10.0" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version = "1.11.0" }
 ktor-server-core = { group = "io.ktor", name = "ktor-server-core", version.ref = "ktor" }
 ktor-server-netty = { group = "io.ktor", name = "ktor-server-netty", version.ref = "ktor" }
 ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
@@ -26,7 +26,7 @@ ktor-server-websockets = { group = "io.ktor", name = "ktor-server-websockets", v
 ktor-server-caching-headers = { group = "io.ktor", name = "ktor-server-caching-headers", version.ref = "ktor" }
 ktor-server-compression = { group = "io.ktor", name = "ktor-server-compression", version.ref = "ktor" }
 ktor-network = { group = "io.ktor", name = "ktor-network", version.ref = "ktor" }
-logback-classic = { group = "ch.qos.logback", name = "logback-classic", version = "1.5.28" }
+logback-classic = { group = "ch.qos.logback", name = "logback-classic", version = "1.5.32" }
 
 zKtlint = { group = "com.pinterest.ktlint", name = "ktlint-cli", version.ref = "ktlint"}
 
