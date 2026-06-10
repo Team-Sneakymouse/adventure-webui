@@ -173,6 +173,9 @@
     color: #AA00AA;
     font-style: italic;
 }
+#output-pre.mode-lore.no-default-italics {
+    font-style: normal;
+}
 #output-pre.mode-lore, #hover-tooltip {
     background-color: rgba(1, 1, 1, 0.8);
     border: solid #1b0035;
@@ -265,6 +268,12 @@
     right: auto;
 }
 input.placeholder-key:invalid {
+    border: 2px red solid;
+}
+.yaml-indent-input {
+    width: 5rem;
+}
+#yaml-input.is-invalid {
     border: 2px red solid;
 }
 #placeholder-tip {

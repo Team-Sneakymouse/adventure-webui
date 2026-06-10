@@ -6,6 +6,10 @@ on:
     branches: [ "main" ]
     tags-ignore: [ "**" ]
 
+permissions:
+  contents: "read"
+  id-token: "write"
+
 concurrency:
   group: ${{ github.ref }}-build
   cancel-in-progress: true
@@ -24,11 +28,48 @@ jobs:
           runtime_version: 21
           publishing_branch_regex: "main"
           gradle_warning_mode: "all"
-      - name: "setup / login to ghcr"
-        uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121" # v4.1.0
+
+      - name: "fetch / registry credentials"
+        uses: "Infisical/secrets-action@v1.0.16"
         with:
-          registry: "ghcr.io"
-          username: "${{ github.actor }}"
-          password: "${{ secrets.GITHUB_TOKEN }}"
+          method: "oidc"
+          identity-id: "${{ secrets.INFISICAL_IDENTITY_ID }}"
+          domain: "${{ secrets.INFISICAL_DOMAIN }}"
+          project-slug: "lords-of-minecraft"
+          env-slug: "prod"
+          secret-path: "/Registry"
+
+      - name: "validate / registry credentials"
+        run: |
+          test -n "${REGISTRY_HOST:-}" || { echo "REGISTRY_HOST was not provided by Infisical" >&2; exit 1; }
+          test -n "${REGISTRY_USER:-}" || { echo "REGISTRY_USER was not provided by Infisical" >&2; exit 1; }
+          test -n "${REGISTRY_PASSWORD:-}" || { echo "REGISTRY_PASSWORD was not provided by Infisical" >&2; exit 1; }
+
+      - name: "setup / login to registry"
+        run: |
+          printf '%s' "$REGISTRY_PASSWORD" | docker login "$REGISTRY_HOST" \
+            --username "$REGISTRY_USER" \
+            --password-stdin
+
       - name: "publish / docker image"
-        run: ./gradlew jib -Djib.console=plain --stacktrace
+        run: ./gradlew jib -Djib.to.image="$REGISTRY_HOST/adventure-webui:latest" -Djib.console=plain --stacktrace
+
+      - name: "fetch / watchtower credentials"
+        uses: "Infisical/secrets-action@v1.0.16"
+        with:
+          method: "oidc"
+          identity-id: "${{ secrets.INFISICAL_IDENTITY_ID }}"
+          domain: "${{ secrets.INFISICAL_DOMAIN }}"
+          project-slug: "lords-of-minecraft"
+          env-slug: "prod"
+          secret-path: "/Watchtower"
+
+      - name: "deploy / trigger watchtower"
+        run: |
+          test -n "${WATCHTOWER_URL:-}" || { echo "WATCHTOWER_URL was not provided by Infisical" >&2; exit 1; }
+          test -n "${WATCHTOWER_TOKEN:-}" || { echo "WATCHTOWER_TOKEN was not provided by Infisical" >&2; exit 1; }
+
+          curl --fail-with-body --show-error --silent \
+            --request POST \
+            --header "Authorization: Bearer $WATCHTOWER_TOKEN" \
+            "$WATCHTOWER_URL"

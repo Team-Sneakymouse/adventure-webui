@@ -227,6 +227,30 @@
           </div>
         </div>
 
+        <div class="columns mb-1">
+          <!-- YAML -->
+          <div class="column is-full pb-0">
+            <div class="is-horizontal is-flex">
+              <label for="yaml-input">YAML: </label>
+              <div class="field has-addons ml-auto mb-1">
+                <div class="control">
+                  <label class="button">
+                    <input id="lore-default-italics" class="mr-1" type="checkbox" checked>
+                    Default italics
+                  </label>
+                </div>
+                <div class="control">
+                  <label class="button is-static" for="yaml-indent">Indentation</label>
+                </div>
+                <div class="control">
+                  <input id="yaml-indent" class="input yaml-indent-input has-text-centered" type="number" min="0" step="1" value="0">
+                </div>
+              </div>
+            </div>
+            <textarea id="yaml-input" class="textarea mono-font" minrows="4" placeholder="lore:&#10;  - &quot;&lt;blue&gt;Hello &lt;red&gt;World!&quot;" spellcheck="false"></textarea>
+          </div>
+        </div>
+
         <div class="columns output-column is-flex-grow-1 is-flex-shrink-0">
           <!-- OUTPUT -->
           <div hidden id="hover-tooltip" class="mc-font"></div>

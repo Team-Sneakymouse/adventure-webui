@@ -62,9 +62,11 @@ public const val PARAM_MODE: String = "mode"
 public const val PARAM_BACKGROUND: String = "bg"
 public const val PARAM_STRING_PLACEHOLDERS: String = "st"
 public const val PARAM_SHORT_LINK: String = "x"
+public const val PARAM_LORE_DEFAULT_ITALICS: String = "loreDefaultItalics"
 
 private var isInEditorMode: Boolean = false
 private lateinit var editorInput: EditorInput
+private var isSyncingYaml: Boolean = false
 
 public lateinit var currentMode: Mode
 private lateinit var webSocket: WebSocket
@@ -111,6 +113,7 @@ public fun mainLoaded() {
                         isInEditorMode = true
                         editorInput = possibleEditorInput
                         input.value = editorInput.input
+                        updateYamlFromInput()
                         bulmaToast.toast(
                             "Loaded editor session! Press the save icon to generate a command to save the message to ${editorInput.application}."
                         )
@@ -160,6 +163,7 @@ public fun mainLoaded() {
     // OUTPUT BOXES
     val outputPre = document.element<HTMLPreElement>("output-pre")
     val outputPane = document.element<HTMLDivElement>("output-pane")
+    val loreDefaultItalics = document.element<HTMLInputElement>("lore-default-italics")
 
     // CARET
     val chatBox = document.element<HTMLDivElement>("chat-entry-box")
@@ -196,6 +200,15 @@ public fun mainLoaded() {
     currentMode = Mode.DEFAULT
     outputPre.classList.add(currentMode.className)
     outputPane.classList.add(currentMode.className)
+    loreDefaultItalics.checked = window.localStorage[PARAM_LORE_DEFAULT_ITALICS]?.toBooleanStrictOrNull() ?: true
+    updateLoreDefaultItalics()
+    loreDefaultItalics.addEventListener(
+        "change",
+        {
+            window.localStorage[PARAM_LORE_DEFAULT_ITALICS] = loreDefaultItalics.checked.toString()
+            updateLoreDefaultItalics()
+        }
+    )
 
     val modeButtons = document.getElementsByClassName("mc-mode").asList().unsafeCast<List<HTMLAnchorElement>>()
     modeButtons.forEach { element ->
@@ -423,6 +436,12 @@ public fun setMode(newMode: Mode) {
     updateBackground()
 }
 
+private fun updateLoreDefaultItalics() {
+    val outputPre = document.element<HTMLPreElement>("output-pre")
+    val loreDefaultItalics = document.element<HTMLInputElement>("lore-default-italics")
+    outputPre.classList.toggle("no-default-italics", !loreDefaultItalics.checked)
+}
+
 private fun readPlaceholders(): Placeholders {
     val userPlaceholders = UserPlaceholder.allInList()
     val stringPlaceholders = mutableMapOf<String, String>()
@@ -470,8 +489,27 @@ private fun onWebsocketReady() {
 
     // INPUT
     val input = document.element<HTMLTextAreaElement>("input")
-    input.addEventListener("keyup", { parse() })
-    input.addEventListener("change", { parse() })
+    input.addEventListener(
+        "input",
+        {
+            updateYamlFromInput()
+            parse()
+        }
+    )
+    input.addEventListener(
+        "keyup",
+        {
+            updateYamlFromInput()
+            parse()
+        }
+    )
+    input.addEventListener(
+        "change",
+        {
+            updateYamlFromInput()
+            parse()
+        }
+    )
     input.addEventListener(
         "paste",
         { event ->
@@ -480,6 +518,7 @@ private fun onWebsocketReady() {
             document.execCommand("insertText", false, paste.replace("\\n", "\n"))
         }
     )
+    installYamlEditor(input)
     val output = document.getElementById("output-pre")!!
     webSocket.onmessage =
         { messageEvent ->
@@ -508,6 +547,124 @@ private fun onWebsocketReady() {
                 }
             }
         }
+}
+
+private fun installYamlEditor(input: HTMLTextAreaElement) {
+    val yaml = document.element<HTMLTextAreaElement>("yaml-input")
+    val indent = document.element<HTMLInputElement>("yaml-indent")
+
+    updateYamlFromInput()
+    indent.addEventListener("input", { updateYamlFromInput() })
+    indent.addEventListener("change", { updateYamlFromInput() })
+    indent.addEventListener("keyup", { updateYamlFromInput() })
+    yaml.addEventListener(
+        "input",
+        {
+            updateInputFromYaml(input, yaml, indent)
+        }
+    )
+    yaml.addEventListener(
+        "keyup",
+        {
+            updateInputFromYaml(input, yaml, indent)
+        }
+    )
+    yaml.addEventListener(
+        "change",
+        {
+            updateInputFromYaml(input, yaml, indent)
+        }
+    )
+}
+
+private fun updateYamlFromInput() {
+    if (isSyncingYaml) return
+
+    val yaml = document.getElementById("yaml-input") as? HTMLTextAreaElement ?: return
+    val indent = document.getElementById("yaml-indent") as? HTMLInputElement ?: return
+    val input = document.element<HTMLTextAreaElement>("input")
+    val headerIndent = indent.value.toIntOrNull()?.coerceAtLeast(0) ?: 0
+
+    isSyncingYaml = true
+    yaml.value = input.value.toLoreYaml(headerIndent)
+    yaml.classList.remove("is-invalid")
+    isSyncingYaml = false
+}
+
+private fun updateInputFromYaml(input: HTMLTextAreaElement, yaml: HTMLTextAreaElement, indent: HTMLInputElement) {
+    if (isSyncingYaml) return
+
+    val result = yaml.value.fromLoreYaml()
+    if (result == null) {
+        yaml.classList.add("is-invalid")
+        return
+    }
+
+    isSyncingYaml = true
+    indent.value = result.indent.toString()
+    input.value = result.lines.joinToString("\n")
+    yaml.classList.remove("is-invalid")
+    isSyncingYaml = false
+    parse()
+}
+
+private data class LoreYamlResult(val indent: Int, val lines: List<String>)
+
+private fun String.toLoreYaml(headerIndent: Int): String {
+    val headerPrefix = " ".repeat(headerIndent)
+    val itemPrefix = " ".repeat(headerIndent + 2)
+    val lines = split("\n")
+
+    return buildString {
+        append(headerPrefix).append("lore:")
+        lines.forEach { line ->
+            append("\n").append(itemPrefix).append("- \"").append(line.escapeYamlString()).append("\"")
+        }
+    }
+}
+
+private fun String.fromLoreYaml(): LoreYamlResult? {
+    if ('\t' in this) return null
+
+    val lines = trimEnd('\n', '\r').split("\n")
+    if (lines.isEmpty()) return null
+
+    val header = lines.first().trimEnd('\r')
+    val headerIndent = header.takeWhile { it == ' ' }.length
+    if (header.substring(headerIndent) != "lore:") return null
+
+    val itemIndent = headerIndent + 2
+    val itemPrefix = " ".repeat(itemIndent) + "- \""
+    val values = mutableListOf<String>()
+    for (line in lines.drop(1)) {
+        val normalized = line.trimEnd('\r')
+        if (!normalized.startsWith(itemPrefix) || !normalized.endsWith("\"")) return null
+        values += normalized.substring(itemPrefix.length, normalized.length - 1).unescapeYamlString() ?: return null
+    }
+    return LoreYamlResult(headerIndent, values)
+}
+
+private fun String.escapeYamlString(): String =
+    replace("\\", "\\\\").replace("\"", "\\\"")
+
+private fun String.unescapeYamlString(): String? {
+    val result = StringBuilder(length)
+    var escaping = false
+    for (character in this) {
+        if (escaping) {
+            when (character) {
+                '\\' -> result.append('\\')
+                '"' -> result.append('"')
+                else -> return null
+            }
+            escaping = false
+        } else if (character == '\\') {
+            escaping = true
+        } else {
+            result.append(character)
+        }
+    }
+    return if (escaping) null else result.toString()
 }
 
 private fun onWebsocketClose() {
