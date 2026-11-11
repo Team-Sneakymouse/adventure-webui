@@ -60,23 +60,3 @@ jobs:
 
       - name: "publish / docker image"
         run: ./gradlew jib -Djib.to.image="$REGISTRY_HOST/adventure-webui:latest" -Djib.console=plain --stacktrace
-
-      - name: "fetch / watchtower credentials"
-        uses: "Infisical/secrets-action@v1.0.16"
-        with:
-          method: "oidc"
-          identity-id: "${{ secrets.INFISICAL_IDENTITY_ID }}"
-          domain: "${{ secrets.INFISICAL_DOMAIN }}"
-          project-slug: "lords-of-minecraft"
-          env-slug: "prod"
-          secret-path: "/Watchtower"
-
-      - name: "deploy / trigger watchtower"
-        run: |
-          test -n "${WATCHTOWER_URL:-}" || { echo "WATCHTOWER_URL was not provided by Infisical" >&2; exit 1; }
-          test -n "${WATCHTOWER_TOKEN:-}" || { echo "WATCHTOWER_TOKEN was not provided by Infisical" >&2; exit 1; }
-
-          curl --fail-with-body --show-error --silent \
-            --request POST \
-            --header "Authorization: Bearer $WATCHTOWER_TOKEN" \
-            "$WATCHTOWER_URL"
